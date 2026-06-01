@@ -1,0 +1,41 @@
+sequence:
+  name: ARG_FRA_182345
+  start_frame: 0
+  num_frames: 250
+
+paths:
+  video: data/videos/ARG_FRA_182345.mov
+  cameras: data/cameras/ARG_FRA_182345.npz
+  boxes: data/boxes/ARG_FRA_182345.npy
+  xrel_sam: data/xrel_sam/ARG_FRA_182345.npy
+  root_cam: data/root_cam/ARG_FRA_182345.npy
+  pitch_points: data/pitch/pitch_points.txt
+  teams: data/teams/ARG_FRA_182345.txt
+
+pitch:
+  infer_segments: true
+  max_segment_length: 8.0
+  segments: null
+
+render:
+  width: 1920
+  height: 1080
+  output_fps: 50
+  stickman_line_width: 2
+  joint_diameter: 4
+  bbox_line_width: 2
+  pitch_line_width: 2
+  floor_alpha: 0.55
+  debug_frames: [0, 100]
+  debug_dir: outputs/frames
+
+broadcast:
+  show_rgb: true
+  show_pitch_lines: true
+  show_boxes: true
+  show_stickmen: true
+  show_green_floor: false
+  stickman_mode: projected_3d
+  start_frame: 0
+  end_frame: 250
+  output_path: outputs/clips/broadcast_overlay.mp4

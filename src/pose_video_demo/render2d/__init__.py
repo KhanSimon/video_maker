@@ -1,0 +1,1 @@
+"""Broadcast camera rendering."""

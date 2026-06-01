@@ -1,0 +1,20 @@
+[project]
+name = "pose-video-demo"
+version = "0.1.0"
+description = "Football pose video demo renderer"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "imageio>=2.37.3",
+    "imageio-ffmpeg>=0.6.0",
+    "matplotlib>=3.10.9",
+    "moviepy>=2.2.1",
+    "numpy>=2.4.6",
+    "opencv-python>=4.13.0.92",
+    "pydantic>=2.13.4",
+    "pyvista>=0.48.4",
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+    "tqdm>=4.67.3",
+    "vtk>=9.6.2",
+]

@@ -1,0 +1,87 @@
+sequence:
+  name: ARG_FRA_182345
+  start_frame: 400
+  num_frames: 250
+
+paths:
+  video: data/videos/ARG_FRA_182345.mov
+  cameras: data/cameras/ARG_FRA_182345.npz
+  boxes: data/boxes/ARG_FRA_182345.npy
+  xrel_sam: data/xrel_sam/ARG_FRA_182345.npy
+  root_cam: data/root_cam/ARG_FRA_182345.npy
+  pitch_points: data/pitch/pitch_points.txt
+  teams: data/teams/ARG_FRA_182345.txt
+
+pitch:
+  infer_segments: true
+  max_segment_length: 8.0
+  segments: null
+
+render:
+  width: 1920
+  height: 1080
+  output_fps: 50
+  stickman_line_width: 2
+  joint_diameter: 5
+  pitch_line_width: 3
+  debug_frames: [0]
+  debug_dir: outputs/frames
+
+drone:
+  width: 1920
+  height: 1080
+  start_frame: 400
+  end_frame: 650
+  output_path: outputs/clips/drone_spiral2.mp4
+  camera_motion:
+    type: travel
+    smoothstep: true
+    look_at_distance_m: 100.0
+
+    # Chaque point peut etre defini en cartesian ou spherical.
+    # Cartesian:
+    #   mode: cartesian
+    #   xyz: [x, y, z]
+    #
+    # Spherical:
+    #   mode: spherical
+    #   origin: players_center   # centre median des joueurs
+    #                            # ou world_origin, field_center, broadcast_camera, [x,y,z]
+    #   radius_m: 50.0
+    #   azimuth_deg: 270.0       # 0 = +X, 90 = +Y
+    #   elevation_deg: 24.0      # angle au-dessus du plan XY
+    #
+    # Zoom:
+    #   mode: broadcast_camera    # defaut: FOV calcule depuis K/fy pour la frame start/end
+    #   factor: 1.0               # 2.0 = zoom x2, donc champ plus serre
+    # ou:
+    #   mode: fov
+    #   fov_deg: 20.0
+    #
+    # Look-at:
+    #   null                  # defaut: direction optique de la camera broadcast start/end
+    # ou:
+    #   mode: cartesian
+    #   xyz: [0.0, 0.0, 1.0]
+    start:
+      position:
+        mode: spherical
+        origin: broadcast_camera
+        radius_m: 0
+        azimuth_deg: 0
+        elevation_deg: 0
+      look_at: null
+      zoom:
+        mode: broadcast_camera
+        factor: 1.0
+    end:
+      position:
+        mode: spherical
+        origin: players_center
+        radius_m: 25.0
+        azimuth_deg: 220.0
+        elevation_deg: 22.0
+      look_at: null
+      zoom:
+        mode: broadcast_camera
+        factor: 1.0

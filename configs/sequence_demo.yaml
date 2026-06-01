@@ -1,0 +1,136 @@
+sequence:
+  name: ARG_FRA_182345
+  fps: 50
+  start_frame: 0
+  num_frames: 750
+
+paths:
+  video: data/videos/ARG_FRA_182345.mov
+  cameras: data/cameras/ARG_FRA_182345.npz
+  boxes: data/boxes/ARG_FRA_182345.npy
+  xrel_sam: data/xrel_sam/ARG_FRA_182345.npy
+  root_cam: data/root_cam/ARG_FRA_182345.npy
+  pitch_points: data/pitch/pitch_points.txt
+  teams: data/teams/ARG_FRA_182345.txt
+
+pitch:
+  infer_segments: true
+  max_segment_length: 8.0
+  segments: null
+
+render:
+  width: 1920
+  height: 1080
+  output_fps: 50
+  stickman_line_width: 2
+  joint_diameter: 4
+  bbox_line_width: 2
+  pitch_line_width: 2
+  floor_alpha: 1
+  debug_frames: [0, 50]
+  debug_dir: outputs/frames
+  colors:
+    team_a: [30, 120, 255]
+    team_b: [255, 140, 0]
+    fallback: [180, 180, 180]
+    referee: [230, 230, 230]
+    pitch_lines: [255, 0, 0]
+    floor_green: [190, 235, 190]
+    background_white: [255, 255, 255]
+
+broadcast:
+  show_rgb: true
+  show_pitch_lines: true
+  show_boxes: true
+  show_stickmen: true
+  show_green_floor: false
+  stickman_mode: projected_3d
+  start_frame: 0
+  end_frame: 250
+  output_path: outputs/clips/broadcast.mp4
+
+drone:
+  width: 1920
+  height: 1080
+  start_frame: 400
+  end_frame: 750
+  output_path: outputs/clips/drone.mp4
+  camera_motion:
+    type: travel
+    smoothstep: true
+    look_at_distance_m: 100.0
+    start:
+      position:
+        mode: spherical
+        origin: broadcast_camera
+        radius_m: 0
+        azimuth_deg: 0
+        elevation_deg: 0
+      look_at: null
+      zoom:
+        mode: broadcast_camera
+        factor: 1.0
+    end:
+      position:
+        mode: spherical
+        origin: players_center
+        radius_m: 25.0
+        azimuth_deg: 220.0
+        elevation_deg: 22.0
+      look_at: null
+      zoom:
+        mode: broadcast_camera
+        factor: 1.0
+
+output_path: outputs/final/final_demo2.mp4
+
+timeline:
+  - name: rgb
+    start: 0.0
+    end: 2.0
+    show_rgb: true
+    show_pitch_lines: false
+    show_boxes: false
+    show_stickmen: false
+    show_green_floor: false
+  - name: pitch_lines
+    start: 2.0
+    end: 3.0
+    show_rgb: true
+    show_pitch_lines: true
+    show_boxes: false
+    show_stickmen: false
+    show_green_floor: false
+  - name: boxes
+    start: 3.0
+    end: 4.0
+    show_rgb: true
+    show_pitch_lines: true
+    show_boxes: true
+    show_stickmen: false
+    show_green_floor: false
+  - name: stickmen
+    start: 4.0
+    end: 6.0
+    show_rgb: true
+    show_pitch_lines: true
+    show_boxes: true
+    show_stickmen: true
+    show_green_floor: false
+  - name: transition_white_green
+    start: 6.0
+    end: 8.0
+    transition:
+      rgb_to_white: true
+      boxes_fade_out: true
+      green_floor_fade_in: false
+    show_pitch_lines: true
+    show_stickmen: true
+    show_boxes: false
+  - name: drone
+    start: 8.0
+    end: 15.0
+    renderer: drone
+    show_green_floor: true
+    show_pitch_lines: true
+    show_stickmen: true

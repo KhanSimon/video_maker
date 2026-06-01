@@ -1,0 +1,26 @@
+sequence:
+  name: ARG_FRA_182345
+
+paths:
+  video: data/videos/ARG_FRA_182345.mov
+  cameras: data/cameras/ARG_FRA_182345.npz
+  boxes: data/boxes/ARG_FRA_182345.npy
+  xrel_sam: data/xrel_sam/ARG_FRA_182345.npy
+  root_cam: data/root_cam/ARG_FRA_182345.npy
+  pitch_points: data/pitch/pitch_points.txt
+  teams: data/teams/ARG_FRA_182345.txt
+
+render:
+  width: 1920
+  height: 1080
+  output_fps: 50
+
+clips:
+  - outputs/clips/clip_rgb.mp4
+  - outputs/clips/clip_pitch_lines.mp4
+  - outputs/clips/clip_boxes.mp4
+  - outputs/clips/clip_stickmen.mp4
+  - outputs/clips/clip_transition_white_green.mp4
+  - outputs/clips/clip_drone.mp4
+
+output_path: outputs/final/final_demo.mp4
