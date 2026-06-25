@@ -17,26 +17,30 @@ def make_floor(points_world: np.ndarray) -> pv.PolyData:
     return pv.PolyData(corners, faces=np.array([4, 0, 1, 2, 3]))
 
 
-def make_pitch_lines(points_world: np.ndarray, segments: list[tuple[int, int]]) -> pv.PolyData:
+def make_pitch_lines(points_world: np.ndarray, segments: list[tuple[int, int]], z_offset_m: float = 0.02) -> pv.PolyData:
+    points = points_world.copy()
+    points[:, 2] += float(z_offset_m)
+    mesh = pv.PolyData()
+    mesh.points = points
+    mesh.lines = np.asarray(_polyline_cells(segments), dtype=np.int64)
+    return mesh
+
+
+def _polyline_cells(segments: list[tuple[int, int]]) -> list[int]:
     cells: list[int] = []
+    current: list[int] = []
     for a, b in segments:
-        cells.extend([2, int(a), int(b)])
-    mesh = pv.PolyData(points_world)
-    mesh.lines = np.asarray(cells, dtype=np.int64)
-    return mesh
-
-
-def make_pitch_boundary_lines(points_world: np.ndarray, z_offset_m: float = 0.02) -> pv.PolyData:
-    mins = points_world.min(axis=0)
-    maxs = points_world.max(axis=0)
-    z = float(mins[2]) + float(z_offset_m)
-    corners = np.array(
-        [[mins[0], mins[1], z], [maxs[0], mins[1], z], [maxs[0], maxs[1], z], [mins[0], maxs[1], z]],
-        dtype=np.float32,
-    )
-    mesh = pv.PolyData(corners)
-    mesh.lines = np.asarray([2, 0, 1, 2, 1, 2, 2, 2, 3, 2, 3, 0], dtype=np.int64)
-    return mesh
+        a = int(a)
+        b = int(b)
+        if current and current[-1] == a:
+            current.append(b)
+            continue
+        if current:
+            cells.extend([len(current), *current])
+        current = [a, b]
+    if current:
+        cells.extend([len(current), *current])
+    return cells
 
 
 def make_skeleton_lines(x_world_frame: np.ndarray, person_indices: list[int]) -> pv.PolyData | None:

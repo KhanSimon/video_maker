@@ -101,8 +101,13 @@ def camera_pose_for_frame(
     fov_default: float = 45.0,
     start_fov_default: float | None = None,
     end_fov_default: float | None = None,
+    start_x_world_frame: np.ndarray | None = None,
+    end_x_world_frame: np.ndarray | None = None,
     start_r_broadcast: np.ndarray | None = None,
     end_r_broadcast: np.ndarray | None = None,
+    start_t_broadcast: np.ndarray | None = None,
+    end_t_broadcast: np.ndarray | None = None,
+    clip_duration_s: float | None = None,
 ) -> tuple[tuple[float, float, float], tuple[float, float, float], tuple[float, float, float], float]:
     motion_type = str(motion.get("type", "travel")).lower()
     fov = float(motion.get("fov_deg", fov_default))
@@ -110,14 +115,16 @@ def camera_pose_for_frame(
         return explicit_travel_pose(
             motion,
             progress,
-            x_world_frame,
-            r_broadcast,
-            t_broadcast,
             fov,
             start_fov_default if start_fov_default is not None else fov_default,
             end_fov_default if end_fov_default is not None else fov_default,
+            start_x_world_frame if start_x_world_frame is not None else x_world_frame,
+            end_x_world_frame if end_x_world_frame is not None else x_world_frame,
             start_r_broadcast if start_r_broadcast is not None else r_broadcast,
             end_r_broadcast if end_r_broadcast is not None else r_broadcast,
+            start_t_broadcast if start_t_broadcast is not None else t_broadcast,
+            end_t_broadcast if end_t_broadcast is not None else t_broadcast,
+            clip_duration_s,
         )
     if motion_type == "static_broadcast_like":
         return static_broadcast_like_pose(motion, x_world_frame, r_broadcast, t_broadcast, fov)
@@ -127,31 +134,34 @@ def camera_pose_for_frame(
 def explicit_travel_pose(
     motion: dict[str, Any],
     progress: float,
-    x_world_frame: np.ndarray,
-    r_broadcast: np.ndarray,
-    t_broadcast: np.ndarray,
     fov: float,
     start_fov_default: float,
     end_fov_default: float,
+    start_x_world_frame: np.ndarray,
+    end_x_world_frame: np.ndarray,
     start_r_broadcast: np.ndarray,
     end_r_broadcast: np.ndarray,
+    start_t_broadcast: np.ndarray,
+    end_t_broadcast: np.ndarray,
+    clip_duration_s: float | None,
 ) -> tuple[tuple[float, float, float], tuple[float, float, float], tuple[float, float, float], float]:
-    target_default = players_center(x_world_frame) + np.array([0.0, 0.0, 1.0])
-    position_default = target_default + np.array([-45.0, -35.0, 25.0])
     start = motion.get("start", {})
     end = motion.get("end", start)
+    mid = motion.get("mid", motion.get("middle", motion.get("waypoint")))
+    start_target_default = players_center(start_x_world_frame) + np.array([0.0, 0.0, 1.0])
+    start_position_default = start_target_default + np.array([-45.0, -35.0, 25.0])
     start_position = resolve_world_point(
         start.get("position"),
-        x_world_frame,
-        r_broadcast,
-        t_broadcast,
-        position_default,
+        start_x_world_frame,
+        start_r_broadcast,
+        start_t_broadcast,
+        start_position_default,
     )
     end_position = resolve_world_point(
         end.get("position"),
-        x_world_frame,
-        r_broadcast,
-        t_broadcast,
+        end_x_world_frame,
+        end_r_broadcast,
+        end_t_broadcast,
         start_position,
     )
     look_at_distance = float(motion.get("look_at_distance_m", 100.0))
@@ -159,26 +169,121 @@ def explicit_travel_pose(
     end_look_at_default = broadcast_orientation_target(end_position, end_r_broadcast, look_at_distance)
     start_look_at = resolve_world_point(
         start.get("look_at"),
-        x_world_frame,
-        r_broadcast,
-        t_broadcast,
+        start_x_world_frame,
+        start_r_broadcast,
+        start_t_broadcast,
         start_look_at_default,
     )
     end_look_at = resolve_world_point(
         end.get("look_at"),
-        x_world_frame,
-        r_broadcast,
-        t_broadcast,
+        end_x_world_frame,
+        end_r_broadcast,
+        end_t_broadcast,
         end_look_at_default,
     )
     smooth = bool(motion.get("smoothstep", True))
     alpha = _smoothstep(progress) if smooth else float(progress)
-    position = _lerp(start_position, end_position, alpha)
-    target = _lerp(start_look_at, end_look_at, alpha)
     start_fov = resolve_zoom_fov(start.get("zoom"), start_fov_default)
     end_fov = resolve_zoom_fov(end.get("zoom"), end_fov_default)
-    fov_from_zoom = float(_lerp(np.array([start_fov]), np.array([end_fov]), alpha)[0])
+    if mid:
+        arrive_at, depart_at = _middle_progress_window(mid, clip_duration_s)
+        mid_anchor = str(mid.get("anchor_frame", "end")).lower()
+        if mid_anchor in {"start", "begin", "first"}:
+            mid_x_world_frame = start_x_world_frame
+            mid_r_broadcast = start_r_broadcast
+            mid_t_broadcast = start_t_broadcast
+        else:
+            mid_x_world_frame = end_x_world_frame
+            mid_r_broadcast = end_r_broadcast
+            mid_t_broadcast = end_t_broadcast
+        mid_position_default = _lerp(start_position, end_position, arrive_at)
+        mid_look_at_default = _lerp(start_look_at, end_look_at, arrive_at)
+        mid_fov_default = float(_lerp(np.array([start_fov]), np.array([end_fov]), arrive_at)[0])
+        mid_position = resolve_world_point(
+            mid.get("position"),
+            mid_x_world_frame,
+            mid_r_broadcast,
+            mid_t_broadcast,
+            mid_position_default,
+        )
+        mid_look_at = resolve_world_point(
+            mid.get("look_at"),
+            mid_x_world_frame,
+            mid_r_broadcast,
+            mid_t_broadcast,
+            mid_look_at_default,
+        )
+        mid_fov = resolve_zoom_fov(mid.get("zoom"), mid_fov_default)
+        position, target, fov_from_zoom = _interpolate_via_middle(
+            progress,
+            arrive_at,
+            depart_at,
+            smooth,
+            start_position,
+            mid_position,
+            end_position,
+            start_look_at,
+            mid_look_at,
+            end_look_at,
+            start_fov,
+            mid_fov,
+            end_fov,
+        )
+    else:
+        position = _lerp(start_position, end_position, alpha)
+        target = _lerp(start_look_at, end_look_at, alpha)
+        fov_from_zoom = float(_lerp(np.array([start_fov]), np.array([end_fov]), alpha)[0])
     return _as_tuple3(position), _as_tuple3(target), (0.0, 0.0, 1.0), fov_from_zoom if np.isfinite(fov_from_zoom) else fov
+
+
+def _middle_progress_window(mid: dict[str, Any], clip_duration_s: float | None) -> tuple[float, float]:
+    arrive_at = float(mid.get("arrive_at", mid.get("at", mid.get("progress", 0.5))))
+    arrive_at = float(np.clip(arrive_at, 0.0, 1.0))
+    if "depart_at" in mid:
+        depart_at = float(mid["depart_at"])
+    elif "leave_at" in mid:
+        depart_at = float(mid["leave_at"])
+    elif "hold_duration_s" in mid and clip_duration_s and clip_duration_s > 1e-9:
+        depart_at = arrive_at + float(mid["hold_duration_s"]) / float(clip_duration_s)
+    else:
+        depart_at = arrive_at + float(mid.get("hold_duration_progress", mid.get("hold_progress", 0.0)))
+    depart_at = float(np.clip(depart_at, arrive_at, 1.0))
+    return arrive_at, depart_at
+
+
+def _interpolate_via_middle(
+    progress: float,
+    arrive_at: float,
+    depart_at: float,
+    smooth: bool,
+    start_position: np.ndarray,
+    mid_position: np.ndarray,
+    end_position: np.ndarray,
+    start_look_at: np.ndarray,
+    mid_look_at: np.ndarray,
+    end_look_at: np.ndarray,
+    start_fov: float,
+    mid_fov: float,
+    end_fov: float,
+) -> tuple[np.ndarray, np.ndarray, float]:
+    progress = float(np.clip(progress, 0.0, 1.0))
+    if progress <= arrive_at:
+        alpha = progress / max(arrive_at, 1e-9)
+        alpha = _smoothstep(alpha) if smooth else alpha
+        return (
+            _lerp(start_position, mid_position, alpha),
+            _lerp(start_look_at, mid_look_at, alpha),
+            float(_lerp(np.array([start_fov]), np.array([mid_fov]), alpha)[0]),
+        )
+    if progress <= depart_at:
+        return mid_position, mid_look_at, float(mid_fov)
+    alpha = (progress - depart_at) / max(1.0 - depart_at, 1e-9)
+    alpha = _smoothstep(alpha) if smooth else alpha
+    return (
+        _lerp(mid_position, end_position, alpha),
+        _lerp(mid_look_at, end_look_at, alpha),
+        float(_lerp(np.array([mid_fov]), np.array([end_fov]), alpha)[0]),
+    )
 
 
 def broadcast_orientation_target(position: np.ndarray, r_broadcast: np.ndarray, distance_m: float) -> np.ndarray:

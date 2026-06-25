@@ -71,6 +71,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "start_frame": None,
         "end_frame": None,
         "output_path": "outputs/clips/drone.mp4",
+        "green_floor_start_delay_s": 0.0,
         "camera_motion": {
             "type": "travel",
             "smoothstep": True,

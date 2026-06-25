@@ -17,12 +17,12 @@ from tqdm import tqdm
 from pose_video_demo.config import frame_range, resolve_config_paths
 from pose_video_demo.io.loaders import SequenceData, describe_sequence, load_sequence
 from pose_video_demo.io.video_io import make_writer, save_debug_png
-from pose_video_demo.pitch.pitch_loader import load_pitch_points
+from pose_video_demo.pitch.pitch_loader import load_pitch_points, parse_segments
 from pose_video_demo.render3d.drone_camera import broadcast_vertical_fov_deg, camera_pose_for_frame
 from pose_video_demo.render3d.scene import (
     make_floor,
     make_joint_points,
-    make_pitch_boundary_lines,
+    make_pitch_lines,
     make_skeleton_lines,
 )
 from pose_video_demo.utils.colors import color_table
@@ -38,6 +38,12 @@ class PyVistaDroneRenderer:
         self.colors = color_table(cfg.get("render", {}).get("colors"))
         paths = resolve_config_paths(cfg)
         self.pitch_points = load_pitch_points(paths["pitch_points"])
+        pitch_cfg = cfg.get("pitch", {})
+        self.pitch_segments = parse_segments(
+            pitch_cfg.get("segments"),
+            self.pitch_points,
+            float(pitch_cfg.get("max_segment_length", 8.0)),
+        )
 
     def render(self, overrides: dict[str, Any] | None = None) -> Path:
         for line in describe_sequence(self.data):
@@ -51,22 +57,25 @@ class PyVistaDroneRenderer:
         fps = float(self.cfg["render"].get("output_fps") or self.data.video_info.fps)
         output_path = resolve_path(options["output_path"], self.cfg.get("_base_dir"))
         writer = make_writer(output_path, fps=fps, width=width, height=height)
+        clip_duration_s = (end - start) / fps
         plotter = pv.Plotter(off_screen=True, window_size=(width, height))
         plotter.set_background("white")
         if hasattr(plotter, "disable_parallel_projection"):
             plotter.disable_parallel_projection()
         debug_indices = set(int(v) for v in self.cfg["render"].get("debug_frames", []))
         debug_dir = resolve_path(self.cfg["render"].get("debug_dir", "outputs/frames"), self.cfg.get("_base_dir"))
+        green_floor_start_delay_s = max(0.0, float(options.get("green_floor_start_delay_s", 0.0)))
+        green_floor_start_frame = int(round(green_floor_start_delay_s * fps))
         rendered_players = False
         try:
             floor = make_floor(self.pitch_points)
-            pitch_lines = make_pitch_boundary_lines(self.pitch_points)
+            pitch_lines = make_pitch_lines(self.pitch_points, self.pitch_segments)
             total = max(1, end - start - 1)
             start_fov = broadcast_vertical_fov_deg(self.data.cameras.k_matrix[start], self.data.video_info.height)
             end_fov = broadcast_vertical_fov_deg(self.data.cameras.k_matrix[end - 1], self.data.video_info.height)
             for local_idx, frame_idx in enumerate(tqdm(range(start, end), desc="drone")):
                 plotter.clear()
-                if options.get("show_green_floor", True):
+                if options.get("show_green_floor", True) and local_idx >= green_floor_start_frame:
                     plotter.add_mesh(floor, color=np.array(self.colors["floor_green"]) / 255.0, ambient=1.0, diffuse=0.0)
                 if options.get("show_pitch_lines", True):
                     plotter.add_mesh(
@@ -94,8 +103,13 @@ class PyVistaDroneRenderer:
                     fov_default=current_fov,
                     start_fov_default=start_fov,
                     end_fov_default=end_fov,
+                    start_x_world_frame=self.data.poses.x_world[:, start],
+                    end_x_world_frame=self.data.poses.x_world[:, end - 1],
                     start_r_broadcast=self.data.cameras.r[start],
                     end_r_broadcast=self.data.cameras.r[end - 1],
+                    start_t_broadcast=self.data.cameras.t[start],
+                    end_t_broadcast=self.data.cameras.t[end - 1],
+                    clip_duration_s=clip_duration_s,
                 )
                 plotter.camera_position = [position, target, up]
                 plotter.camera.view_angle = fov

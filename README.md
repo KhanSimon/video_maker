@@ -60,6 +60,22 @@ Assembler des clips déjà rendus :
 python scripts/assemble_demo.py --config configs/assemble_demo.yaml
 ```
 
+Construire les poses estimees en coordonnees monde :
+
+```bash
+python scripts/build_x_world_estim.py --sequence ARG_FRA_182345 --overwrite
+```
+
+Par defaut, la sortie est ecrite dans `data/x_world_estim/<sequence>.npy` avec le layout `(N,T,25,3)`, qui est aussi la convention de `data/x_world_gt`.
+
+Visualisateur interactif Open3D :
+
+```bash
+python scripts/interactive_viewer.py --config configs/interactive_viewer.yaml
+```
+
+La config permet de choisir `interactive_viewer.source: gt`, `estim` ou `both`. En mode `both`, la GT est rouge et l'estimation garde les couleurs d'equipe. `M` alterne entre les modes `gt`, `estim` et `both`. Controles : avec `mouse_look: true`, mouvement souris pour regarder autour en mode FPS; avec `mouse_look: false`, Open3D reprend le drag/orbit natif. Scroll pour zoomer, `Espace` play/pause, fleches gauche/droite pour changer de frame, `Z/S/Q/D` pour avancer/reculer/gauche/droite, `A/E` pour monter/descendre, `+/-` pour la vitesse temporelle entre `0.25x` et `2x`, `R` reset camera, `Echap` quitter.
+
 Les vidéos sont écrites dans `outputs/clips/` et `outputs/final/`. Quelques PNG de debug sont sauvegardés dans `outputs/frames/`.
 
 ## Pipeline

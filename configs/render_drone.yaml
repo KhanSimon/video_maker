@@ -30,9 +30,10 @@ render:
 drone:
   width: 1920
   height: 1080
-  start_frame: 400
-  end_frame: 650
-  output_path: outputs/clips/drone_spiral2.mp4
+  start_frame: 650
+  end_frame: 1240
+  output_path: outputs/clips/drone_spiral_pred.mp4
+  green_floor_start_delay_s: 0
   camera_motion:
     type: travel
     smoothstep: true
@@ -74,14 +75,27 @@ drone:
       zoom:
         mode: broadcast_camera
         factor: 1.0
+    mid: #supp si on veut pas de pause
+      arrive_at: 0.3
+      hold_duration_s: 0.1
+      position:
+        mode: cartesian
+        origin: world_origin
+        xyz: [-10.0, -10.0, 2]
+      look_at:
+        mode: cartesian
+        xyz: [-30.0, -22.0, 2.0]  
+      zoom:
+        mode: factor
+        factor: 1
     end:
       position:
-        mode: spherical
-        origin: players_center
-        radius_m: 25.0
-        azimuth_deg: 220.0
-        elevation_deg: 22.0
-      look_at: null
+        mode: cartesian
+        origin: world_origin
+        xyz: [-52.0, 34.0, 15.0]
+      look_at:
+        mode: cartesian
+        xyz: [-26.0, -34.0, 0]
       zoom:
-        mode: broadcast_camera
-        factor: 1.0
+        mode: factor
+        factor: 0.5

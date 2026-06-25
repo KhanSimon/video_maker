@@ -197,24 +197,59 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    """
-    plot_pitch_with_point(
-        Path("data/pitch/pitch_points.txt"),
-        (1.0, 1.0, 1.0),
-        show=True
-    )
-    """
-    cameras_path = Path(CAMERAS_PATH) if CAMERAS_PATH else None
-    plot_pitch_with_spherical_point(
-        Path("data/pitch/pitch_points.txt"),
-        radius_m=30.0,
-        azimuth_deg=45.0,
-        elevation_deg=45.0,
-        origin=(0.0, 0.0, 0.0),
-        cameras_path=cameras_path,
-        show=True,
-    )
+    parser = build_parser()
+    args = parser.parse_args()
 
+    pitch_points_path = resolve_path(args.pitch_points)
+    cameras_path = resolve_path(args.cameras) if args.cameras else None
+    output_path = resolve_path(args.output) if args.output else None
+
+    if args.x is not None and args.y is not None and args.z is not None:
+        point_xyz = (args.x, args.y, args.z)
+        plot_pitch_with_point(
+            pitch_points_path,
+            point_xyz,
+            cameras_path=cameras_path,
+            output_path=output_path,
+            show=not args.no_show,
+        )
+        print(f"Point monde: {point_xyz}")
+        return
+
+    if SPHERICAL_POINT is not None:
+        point_xyz = plot_pitch_with_spherical_point(
+            pitch_points_path,
+            radius_m=float(SPHERICAL_POINT["radius_m"]),
+            azimuth_deg=float(SPHERICAL_POINT["azimuth_deg"]),
+            elevation_deg=float(SPHERICAL_POINT["elevation_deg"]),
+            origin=tuple(SPHERICAL_POINT.get("origin", (0.0, 0.0, 0.0))),  # type: ignore[arg-type]
+            cameras_path=cameras_path,
+            output_path=output_path,
+            show=not args.no_show,
+        )
+    else:
+        point_xyz = plot_pitch_with_spherical_point(
+            pitch_points_path,
+            radius_m=30.0,
+            azimuth_deg=45.0,
+            elevation_deg=15.0,
+            origin=(0.0, 0.0, 0.0),
+            cameras_path=cameras_path,
+            output_path=output_path,
+            show=not args.no_show,
+        )
+
+    print(f"Point monde: {point_xyz}")
+
+
+# -----------------------------------------------------------------------------
+#
+# Lancer :
+#   uv run python scripts/plot_world_point.py --x 1 --y 2 --z 3
+#
+# Pour un point spherique, omettre `--x/--y/--z` et laisser
+# `SPHERICAL_POINT` dans ce fichier, ou modifier la valeur par defaut dans `main()`.
+# -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
     main()

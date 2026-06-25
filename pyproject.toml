@@ -10,6 +10,7 @@ dependencies = [
     "matplotlib>=3.10.9",
     "moviepy>=2.2.1",
     "numpy>=2.4.6",
+    "open3d>=0.19.0",
     "opencv-python>=4.13.0.92",
     "pydantic>=2.13.4",
     "pyvista>=0.48.4",
