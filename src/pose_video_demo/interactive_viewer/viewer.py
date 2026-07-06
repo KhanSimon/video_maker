@@ -33,6 +33,9 @@ class InteractivePoseViewer:
         self.display_modes: list[str] = []
         self.display_mode = str(self.viewer_cfg.get("source", "gt")).lower()
         self.window_name = "Pose Video Demo - Open3D Viewer"
+        self.camera_mode = str(
+            self.viewer_cfg.get("camera_mode", self.viewer_cfg.get("view_mode", "free"))
+        ).lower()
         self.mouse_look_enabled = bool(self.viewer_cfg.get("mouse_look", True))
         self.mouse_sensitivity = float(self.viewer_cfg.get("mouse_sensitivity", 0.35))
         self.max_mouse_delta = float(self.viewer_cfg.get("max_mouse_delta", 80.0))
@@ -86,6 +89,11 @@ class InteractivePoseViewer:
         render.background_color = np.asarray(self.viewer_cfg.get("background_color", [0.96, 0.98, 1.0]), dtype=np.float64)
         render.line_width = float(self.viewer_cfg.get("line_width", 3.0))
         render.point_size = float(self.viewer_cfg.get("point_size", 4.0))
+        floor_color_mode = str(self.viewer_cfg.get("floor_color_mode", "fixed")).lower()
+        if floor_color_mode not in {"fixed", "lit"}:
+            raise ValueError(f"Unsupported floor_color_mode={floor_color_mode}. Use 'fixed' or 'lit'.")
+        render.light_on = floor_color_mode == "lit"
+        render.mesh_show_back_face = bool(self.viewer_cfg.get("mesh_show_back_face", True))
         self._apply_display_mode()
         self._print_scene_diagnostics()
         self._push_frame_update()
@@ -101,6 +109,8 @@ class InteractivePoseViewer:
             self.state.next_frame(total_frames, frames_to_advance)
             self.last_tick = now
             self._push_frame_update()
+        if self._field_orbit_enabled():
+            self._apply_field_orbit_constraints()
         return False
 
     def _push_frame_update(self) -> None:
@@ -150,6 +160,9 @@ class InteractivePoseViewer:
         return False
 
     def move_camera(self, forward: float = 0.0, right: float = 0.0, up: float = 0.0):
+        if self._field_orbit_enabled():
+            self._move_field_orbit(float(forward), float(right), float(up))
+            return False
         control = self.vis.get_view_control()
         control.camera_local_translate(float(forward), float(right), float(up))
         self.vis.update_renderer()
@@ -189,12 +202,26 @@ class InteractivePoseViewer:
             -dx * self.mouse_sensitivity,
             y_direction * dy * self.mouse_sensitivity,
         )
+        if self._field_orbit_enabled():
+            self._apply_field_orbit_constraints()
         self.vis.update_renderer()
 
     def reset_camera(self):
         if self.scene is None:
             return False
         self.vis.reset_view_point(True)
+        initial_camera = self.viewer_cfg.get("initial_camera")
+        if initial_camera:
+            self._apply_initial_camera(initial_camera)
+            if self._field_orbit_enabled():
+                self._apply_field_orbit_constraints()
+            self.last_mouse_xy = None
+            if self.mouse_capture is not None and self.mouse_capture.enabled:
+                self.mouse_capture.warp_to_center()
+                self.last_mouse_xy = self.mouse_capture.center_local
+            self.vis.update_renderer()
+            self._print_status()
+            return False
         control = self.vis.get_view_control()
         center = self.scene.pitch_center
         initial_front = np.asarray(self.viewer_cfg.get("initial_front", [0.05, -0.62, -0.78]), dtype=np.float64)
@@ -203,6 +230,8 @@ class InteractivePoseViewer:
         control.set_front(initial_front.tolist())
         control.set_up([0.0, 0.0, 1.0])
         control.set_zoom(float(self.viewer_cfg.get("camera_zoom", 0.32)))
+        if self._field_orbit_enabled():
+            self._apply_field_orbit_constraints()
         self.last_mouse_xy = None
         if self.mouse_capture is not None and self.mouse_capture.enabled:
             self.mouse_capture.warp_to_center()
@@ -290,6 +319,81 @@ class InteractivePoseViewer:
             return 0
         return min(layer.num_frames for layer in self.layers.values())
 
+    def _field_orbit_enabled(self) -> bool:
+        return self.camera_mode in {"field_orbit", "terrain_orbit", "pitch_orbit", "orbit"}
+
+    def _field_orbit_center(self) -> np.ndarray:
+        if self.scene is None:
+            return np.array([0.0, 0.0, 1.0], dtype=np.float64)
+        raw = self.viewer_cfg.get("field_orbit_center")
+        if raw is not None:
+            center = np.asarray(raw, dtype=np.float64)
+            if center.shape != (3,):
+                raise ValueError("field_orbit_center must be an XYZ triple")
+            return center
+        center = self.scene.pitch_center.astype(np.float64).copy()
+        center[2] = float(self.viewer_cfg.get("field_orbit_center_z", 1.0))
+        return center
+
+    def _field_orbit_limits(self) -> tuple[float, float, float]:
+        min_elevation = np.deg2rad(float(self.viewer_cfg.get("field_orbit_min_elevation_deg", 5.0)))
+        max_elevation = np.deg2rad(float(self.viewer_cfg.get("field_orbit_max_elevation_deg", 75.0)))
+        if max_elevation < min_elevation:
+            min_elevation, max_elevation = max_elevation, min_elevation
+        min_distance = float(self.viewer_cfg.get("field_orbit_min_distance_m", 5.0))
+        return min_elevation, max_elevation, max(min_distance, 1e-3)
+
+    def _field_orbit_angles(self) -> tuple[float, float, float]:
+        center = self._field_orbit_center()
+        position, _ = self._camera_xyz_fov()
+        offset = position - center
+        if np.linalg.norm(offset) <= 1e-9 or not np.isfinite(offset).all():
+            offset = np.array([0.0, -85.0, 25.0], dtype=np.float64)
+        radius = float(np.linalg.norm(offset))
+        yaw = float(np.arctan2(offset[1], offset[0]))
+        horizontal = float(np.linalg.norm(offset[:2]))
+        elevation = float(np.arctan2(offset[2], horizontal))
+        min_elevation, max_elevation, min_distance = self._field_orbit_limits()
+        return yaw, float(np.clip(elevation, min_elevation, max_elevation)), max(radius, min_distance)
+
+    def _field_orbit_position(self, yaw: float, elevation: float, radius: float) -> np.ndarray:
+        min_elevation, max_elevation, min_distance = self._field_orbit_limits()
+        elevation = float(np.clip(elevation, min_elevation, max_elevation))
+        radius = max(float(radius), min_distance)
+        center = self._field_orbit_center()
+        horizontal = radius * np.cos(elevation)
+        return center + np.array(
+            [
+                horizontal * np.cos(yaw),
+                horizontal * np.sin(yaw),
+                radius * np.sin(elevation),
+            ],
+            dtype=np.float64,
+        )
+
+    def _set_field_orbit_camera(self, yaw: float, elevation: float, radius: float, print_status: bool = True) -> None:
+        position = self._field_orbit_position(yaw, elevation, radius)
+        center = self._field_orbit_center()
+        control = self.vis.get_view_control()
+        params = control.convert_to_pinhole_camera_parameters()
+        params.extrinsic = self._look_at_extrinsic(position, center, np.array([0.0, 0.0, 1.0]))
+        control.convert_from_pinhole_camera_parameters(params, allow_arbitrary=True)
+        self.vis.update_renderer()
+        if print_status:
+            self._print_status()
+
+    def _apply_field_orbit_constraints(self) -> None:
+        yaw, elevation, radius = self._field_orbit_angles()
+        self._set_field_orbit_camera(yaw, elevation, radius, print_status=False)
+
+    def _move_field_orbit(self, forward: float, right: float, up: float) -> None:
+        yaw, elevation, radius = self._field_orbit_angles()
+        step_scale = max(self.state.move_step_m, 1e-9)
+        yaw += np.deg2rad(float(self.viewer_cfg.get("field_orbit_yaw_step_deg", 4.0))) * (right / step_scale)
+        elevation += np.deg2rad(float(self.viewer_cfg.get("field_orbit_pitch_step_deg", 3.0))) * (forward / step_scale)
+        radius -= float(self.viewer_cfg.get("field_orbit_zoom_step_m", 5.0)) * (up / step_scale)
+        self._set_field_orbit_camera(yaw, elevation, radius)
+
     def _print_scene_diagnostics(self) -> None:
         if self.scene is None or not self.layers:
             return
@@ -315,6 +419,38 @@ class InteractivePoseViewer:
         translation = extrinsic[:3, 3]
         camera_position = -(rotation.T @ translation)
         return camera_position, float(control.get_field_of_view())
+
+    def _apply_initial_camera(self, initial_camera: dict[str, Any]) -> None:
+        position = np.asarray(initial_camera["position"], dtype=np.float64)
+        look_at = np.asarray(initial_camera["look_at"], dtype=np.float64)
+        up = np.asarray(initial_camera.get("up", [0.0, 0.0, 1.0]), dtype=np.float64)
+        control = self.vis.get_view_control()
+        params = control.convert_to_pinhole_camera_parameters()
+        params.extrinsic = self._look_at_extrinsic(position, look_at, up)
+        ok = control.convert_from_pinhole_camera_parameters(params, allow_arbitrary=True)
+        if not ok:
+            print("warning: Open3D refused initial_camera extrinsic, falling back to lookat/front")
+            front = self._normalize(look_at - position, fallback=np.array([0.05, -0.62, -0.78]))
+            control.set_lookat(look_at.tolist())
+            control.set_front(front.tolist())
+            control.set_up(up.tolist())
+
+    def _look_at_extrinsic(self, position: np.ndarray, look_at: np.ndarray, up: np.ndarray) -> np.ndarray:
+        if position.shape != (3,) or look_at.shape != (3,) or up.shape != (3,):
+            raise ValueError("initial_camera position/look_at/up must be XYZ triples")
+        front = self._normalize(look_at - position, fallback=np.array([1.0, 0.0, 0.0]))
+        up = self._normalize(up, fallback=np.array([0.0, 0.0, 1.0]))
+        right = np.cross(front, up)
+        if np.linalg.norm(right) <= 1e-9:
+            right = np.cross(front, np.array([0.0, 1.0, 0.0]))
+        right = self._normalize(right, fallback=np.array([1.0, 0.0, 0.0]))
+        down = self._normalize(np.cross(front, right), fallback=-up)
+        rotation = np.vstack([right, down, front])
+        translation = -rotation @ position
+        extrinsic = np.eye(4, dtype=np.float64)
+        extrinsic[:3, :3] = rotation
+        extrinsic[:3, 3] = translation
+        return extrinsic
 
     @staticmethod
     def _normalize(vector: np.ndarray, fallback: np.ndarray) -> np.ndarray:

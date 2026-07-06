@@ -76,6 +76,19 @@ python scripts/interactive_viewer.py --config configs/interactive_viewer.yaml
 
 La config permet de choisir `interactive_viewer.source: gt`, `estim` ou `both`. En mode `both`, la GT est rouge et l'estimation garde les couleurs d'equipe. `M` alterne entre les modes `gt`, `estim` et `both`. Controles : avec `mouse_look: true`, mouvement souris pour regarder autour en mode FPS; avec `mouse_look: false`, Open3D reprend le drag/orbit natif. Scroll pour zoomer, `Espace` play/pause, fleches gauche/droite pour changer de frame, `Z/S/Q/D` pour avancer/reculer/gauche/droite, `A/E` pour monter/descendre, `+/-` pour la vitesse temporelle entre `0.25x` et `2x`, `R` reset camera, `Echap` quitter.
 
+Dans `configs/interactive_viewer.yaml`, `floor_color_mode: fixed` garde la couleur du terrain constante, tandis que `floor_color_mode: lit` laisse l'eclairage Open3D influencer la couleur.
+
+La position/orientation initiale du visualisateur se regle avec :
+
+```yaml
+initial_camera:
+  position: [0.0, -85.0, 25.0]
+  look_at: [0.0, 0.0, 1.0]
+  up: [0.0, 0.0, 1.0]
+```
+
+Cette camera est aussi reappliquee avec `R`.
+
 Les vidéos sont écrites dans `outputs/clips/` et `outputs/final/`. Quelques PNG de debug sont sauvegardés dans `outputs/frames/`.
 
 ## Pipeline

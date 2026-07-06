@@ -50,4 +50,4 @@ def register_controls(viewer) -> None:
 
     vis.register_key_callback(ord("+"), lambda vis: viewer.change_speed(0.25))
     vis.register_key_callback(ord("="), lambda vis: viewer.change_speed(0.25))
-    vis.register_key_callback(ord("-"), lambda vis: viewer.change_speed(-0.25))
+    vis.register_key_callback(ord(")"), lambda vis: viewer.change_speed(-0.25))
