@@ -4,7 +4,7 @@ from _bootstrap import add_src_to_path
 
 add_src_to_path()
 
-from pose_video_demo.interactive_viewer.main import main
+from video_maker.interactive_viewer.main import main
 
 
 if __name__ == "__main__":

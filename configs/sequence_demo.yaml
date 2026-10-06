@@ -1,8 +1,70 @@
+# MHR se regle par segment de timeline et par etape de camera (start, mid1..., end).
+# true = corps MHR ; false = squelettes. Ces options reglent la qualite des maillages :
+mhr:
+  lod: 1               # 1 = export original ; 2..6 = detail decroissant ; 0 = densifie
+  smooth_shading: true
+
 sequence:
   name: ARG_FRA_182345
-  fps: 50
-  start_frame: 0
-  num_frames: 1750
+
+timeline:
+  # Unique definition des plages : frames source, numerotees a partir de 0.
+  # end_frame est exclu et doit etre egal au start_frame suivant.
+  - name: rgb
+    MHR: false
+    start_frame: 0
+    end_frame: 100
+    show_rgb: true
+    show_pitch_lines: false
+    show_boxes: false
+    show_stickmen: false
+    show_green_floor: false
+  - name: pitch_lines
+    MHR: false
+    start_frame: 100
+    end_frame: 150
+    show_rgb: true
+    show_pitch_lines: true
+    show_boxes: false
+    show_stickmen: false
+    show_green_floor: false
+  - name: boxes
+    MHR: false
+    start_frame: 150
+    end_frame: 200
+    show_rgb: true
+    show_pitch_lines: true
+    show_boxes: true
+    show_stickmen: false
+    show_green_floor: false
+  - name: stickmen
+    MHR: false
+    start_frame: 200
+    end_frame: 300
+    show_rgb: true
+    show_pitch_lines: true
+    show_boxes: true
+    show_stickmen: true
+    show_green_floor: false
+  - name: transition_white_green
+    MHR: false
+    start_frame: 300
+    end_frame: 400
+    transition:
+      rgb_to_white: true
+      boxes_fade_out: true
+      green_floor_fade_in: false
+    show_pitch_lines: true
+    show_stickmen: true
+    show_boxes: false
+  - name: drone
+    MHR: true
+    start_frame: 400
+    end_frame: 1241
+    renderer: drone
+    show_green_floor: true
+    show_pitch_lines: true
+    show_stickmen: true
 
 paths:
   video: data/videos/ARG_FRA_182345.mov
@@ -10,6 +72,8 @@ paths:
   boxes: data/boxes/ARG_FRA_182345.npy
   xrel_sam: data/xrel_sam/ARG_FRA_182345.npy
   root_cam: data/root_cam/ARG_FRA_182345.npy
+  vertices: data/vertices/ARG_FRA_182345.npy
+  mhr_assets: data/mhr
   pitch_points: data/pitch/pitch_points.txt
   teams: data/teams/ARG_FRA_182345.txt
 
@@ -21,13 +85,13 @@ pitch:
 render:
   width: 1920
   height: 1080
-  output_fps: 50
+  output_fps: 50  # Cadence du fichier video ; aucun effet sur les frames des evenements.
   stickman_line_width: 2
   joint_diameter: 4
   bbox_line_width: 2
   pitch_line_width: 2
   floor_alpha: 1
-  debug_frames: [0, 50]
+  debug_frames: [0, 50, 100, 150, 200, 250, 400, 450]  # Frames source.
   debug_dir: outputs/frames
   colors:
     team_a: [30, 120, 255]
@@ -45,22 +109,19 @@ broadcast:
   show_stickmen: true
   show_green_floor: false
   stickman_mode: projected_3d
-  start_frame: 0
-  end_frame: 250
   output_path: outputs/clips/broadcast.mp4
 
 drone:
   width: 1920
   height: 1080
-  start_frame: 250
-  end_frame: 750
   output_path: outputs/clips/drone.mp4
-  green_floor_start_delay_s: 0.5
+  green_floor_start_frame: 425  # Numero absolu dans la sequence source.
   camera_motion:
     type: travel
     smoothstep: true
     look_at_distance_m: 100.0
     start:
+      MHR: false
       position:
         mode: spherical
         origin: broadcast_camera
@@ -71,70 +132,85 @@ drone:
       zoom:
         mode: broadcast_camera
         factor: 1.0
-    mid:
-      arrive_at: 0.45
-      hold_duration_s: 1.0
-    end:
+    # Ajouter mid2, mid3, ... au meme niveau pour prolonger le trajet.
+    # MHR prend effet a l'arrivee, jusqu'a l'etape suivante (pause comprise).
+    # Une etape sans MHR conserve le choix precedent ; end ne concerne que la derniere frame.
+    # frame = arrivee dans la sequence source ; hold_frames inclut la frame d'arrivee.
+    mid1:  # L'ancien nom mid reste accepte pour une seule etape.
+      MHR: false
+      frame: 512
+      hold_frames: 45
       position:
-        mode: spherical
-        origin: players_center
-        radius_m: 25.0
-        azimuth_deg: 220.0
-        elevation_deg: 22.0
-      look_at: null
+        mode: cartesian
+        xyz: [-40, -20, 10]
+      look_at:
+        mode: cartesian
+        xyz: [40, 0, 2]
       zoom:
         mode: broadcast_camera
         factor: 1.0
+    mid2:
+      MHR: false
+      frame: 625
+      hold_frames: 79
+      position:
+        mode: cartesian
+        xyz: [10, -10, 2] #[20, -50, 2]
+      look_at:
+        mode: cartesian
+        xyz: [50, -80, 2] #[26.0, 50, 0]
+      zoom:
+        mode: factor
+        factor: 0.5
+    mid3:
+      MHR: true
+      frame: 760
+      hold_frames: 1
+      position:
+        mode: cartesian
+        xyz: [10, 10, 10] #[20, -50, 2]
+      look_at:
+        mode: cartesian
+        xyz: [-30, -30, 2] #[26.0, 50, 0]
+      zoom:
+        mode: factor
+        factor: 1
+    mid4:
+      MHR: true
+      frame: 850
+      hold_frames: 1
+      position:
+        mode: cartesian
+        xyz: [-10, 20, 10] #[20, -50, 2]
+      look_at:
+        mode: cartesian
+        xyz: [-30, -40, 2] #[26.0, 50, 0]
+      zoom:
+        mode: factor
+        factor: 1
+    mid5:
+      MHR: true
+      frame: 1000
+      hold_frames: 1
+      position:
+        mode: cartesian
+        xyz: [0, -50, 20] #[20, -50, 2]
+      look_at:
+        mode: cartesian
+        xyz: [-50, 15, 2] #[26.0, 50, 0]
+      zoom:
+        mode: factor
+        factor: 1
+    end:
+      MHR: true
+      position:
+        mode: cartesian
+        xyz: [-30, -50, 10] #[20, -50, 2]
+      look_at:
+        mode: cartesian
+        xyz: [-10, 30, -10] #[26.0, 50, 0]
+      zoom:
+        mode: factor
+        factor: 0.2
 
 output_path: outputs/final/final_demo2.mp4
-
-timeline:
-  - name: rgb
-    start: 0.0
-    end: 2.0
-    show_rgb: true
-    show_pitch_lines: false
-    show_boxes: false
-    show_stickmen: false
-    show_green_floor: false
-  - name: pitch_lines
-    start: 2.0
-    end: 3.0
-    show_rgb: true
-    show_pitch_lines: true
-    show_boxes: false
-    show_stickmen: false
-    show_green_floor: false
-  - name: boxes
-    start: 3.0
-    end: 4.0
-    show_rgb: true
-    show_pitch_lines: true
-    show_boxes: true
-    show_stickmen: false
-    show_green_floor: false
-  - name: stickmen
-    start: 4.0
-    end: 6.0
-    show_rgb: true
-    show_pitch_lines: true
-    show_boxes: true
-    show_stickmen: true
-    show_green_floor: false
-  - name: transition_white_green
-    start: 6.0
-    end: 8.0
-    transition:
-      rgb_to_white: true
-      boxes_fade_out: true
-      green_floor_fade_in: false
-    show_pitch_lines: true
-    show_stickmen: true
-    show_boxes: false
-  - name: drone
-    start: 8.0
-    end: 15.0
-    renderer: drone
-    show_green_floor: true
-    show_pitch_lines: true
-    show_stickmen: true

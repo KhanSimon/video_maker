@@ -1,0 +1,52 @@
+# python scripts/prepare_calibrated_sequence.py --config configs/prepare_gardien_rennes_ground_ray.yaml --overwrite
+sequence:
+  name: gardien_rennes
+  fps: 50
+
+inputs:
+  calibration_json: data/cameras/gardien_rennes.json
+  xrel_sam: data/xrel_sam/gardien_rennes.npy
+  x_2d: data/x_2d/gardien_rennes.npy
+  boxes: data/boxes/gardien_rennes.npy
+
+outputs:
+  cameras: data/cameras/gardien_rennes.npz
+  pitch_points: data/pitch/gardien_rennes.txt
+  teams: data/teams/gardien_rennes.txt
+  x_world: data/geometric_estim/gardien_rennes/x_world.npy
+  root_cam: data/geometric_estim/gardien_rennes/root_cam.npy
+  diagnostics: data/geometric_estim/gardien_rennes/diagnostics.npz
+
+camera:
+  source_to_world_axis_signs: [1, -1, -1]
+
+poses:
+  input_layout: auto
+  # Corrige ici une source relative dont Y ou Z serait inverse.
+  xrel_axis_signs: [1, 1, 1]
+
+translation:
+  method: ground_ray
+  ground_z_m: 0.0
+  # Recommande: transforme d'abord les offsets relatifs dans le monde, puis prend le Z minimal.
+  contact_selection: world_z
+  # Alternative: contact_selection: relative_axis avec les deux options suivantes.
+  relative_vertical_axis: y
+  relative_ground_direction: max
+  candidate_joint_indices: null  # null = tous les 25 joints
+  smoothing:
+    enabled: true
+    median_window: 7
+    cutoff_hz: 3.0
+    max_speed_m_s: 12.0
+    preserve_ground_contact: true
+
+pitch:
+  mode: calibration_lines
+  ground_z_m: 0.0
+  floor_extent_m: [-52.5, 0.0, -34.0, 34.0]
+  sample_spacing_m: 1.0
+  max_segment_length_m: 8.0
+
+teams:
+  strategy: split

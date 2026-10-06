@@ -1,0 +1,42 @@
+# python scripts/prepare_calibrated_sequence.py --config configs/prepare_gardien_rennes.yaml --overwrite
+sequence:
+  name: gardien_rennes
+  fps: 50
+
+inputs:
+  # Une liste de JSON peut etre fournie pour une camera qui change dans le temps.
+  calibration_json: data/cameras/gardien_rennes.json
+  xrel_sam: data/xrel_sam/gardien_rennes.npy
+  translations: data/t_per_player/gardien_rennes.npy
+  boxes: data/boxes/gardien_rennes.npy
+
+translation:
+  method: input
+
+outputs:
+  cameras: data/cameras/gardien_rennes.npz
+  pitch_points: data/pitch/gardien_rennes.txt
+  teams: data/teams/gardien_rennes.txt
+  x_world: data/x_world_estim/gardien_rennes.npy
+
+camera:
+  # Passage au repere droit du projet: Y lateral oppose et Z vers le haut.
+  source_to_world_axis_signs: [1, -1, -1]
+
+poses:
+  # Les fichiers actuels sont (T,N,...), mais auto accepte aussi (N,T,...).
+  input_layout: auto
+  # Mettre [1, -1, 1] ici si une future source xrel a son axe Y inverse.
+  xrel_axis_signs: [1, 1, 1]
+
+pitch:
+  # Reconstruit uniquement les marquages presents dans calibration.input_lines.
+  mode: calibration_lines
+  ground_z_m: 0.0
+  # Emprise du demi-terrain utilise pour l'exercice; ne cree pas de lignes.
+  floor_extent_m: [-52.5, 0.0, -34.0, 34.0]
+  sample_spacing_m: 1.0
+  max_segment_length_m: 8.0
+
+teams:
+  strategy: split  # attribution fictive: premiere moitie A, seconde moitie B

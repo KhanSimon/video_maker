@@ -4,7 +4,7 @@ from _bootstrap import add_src_to_path
 
 add_src_to_path()
 
-from pose_video_demo.utils.plot_world_point import main
+from video_maker.utils.plot_world_point import main
 
 
 if __name__ == "__main__":

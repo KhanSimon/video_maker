@@ -1,14 +1,13 @@
+#python scripts/render_broadcast.py --config configs/render_broadcast.yaml
 sequence:
   name: ARG_FRA_182345
-  start_frame: 0
-  num_frames: 250
 
 paths:
   video: data/videos/ARG_FRA_182345.mov
   cameras: data/cameras/ARG_FRA_182345.npz
   boxes: data/boxes/ARG_FRA_182345.npy
   xrel_sam: data/xrel_sam/ARG_FRA_182345.npy
-  root_cam: data/root_cam/ARG_FRA_182345.npy
+  root_cam: data/root_cam_gt/ARG_FRA_182345.npy
   pitch_points: data/pitch/pitch_points.txt
   teams: data/teams/ARG_FRA_182345.txt
 
@@ -20,7 +19,7 @@ pitch:
 render:
   width: 1920
   height: 1080
-  output_fps: 50
+  output_fps: 50  # Cadence du fichier video ; aucun effet sur les frames des evenements.
   stickman_line_width: 2
   joint_diameter: 4
   bbox_line_width: 2
@@ -36,6 +35,6 @@ broadcast:
   show_stickmen: true
   show_green_floor: false
   stickman_mode: projected_3d
-  start_frame: 0
-  end_frame: 250
-  output_path: outputs/clips/broadcast_overlay.mp4
+  start_frame: 0     # Frame source incluse.
+  end_frame: 1240    # Frame source exclue : derniere image = 1239.
+  output_path: outputs/clips/broadcast_overlay_footcamGT.mp4

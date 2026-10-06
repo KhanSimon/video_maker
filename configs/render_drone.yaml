@@ -1,7 +1,11 @@
+# true : surfaces MHR ; false : squelettes 3D.
+MHR: false
+mhr:
+  lod: 1                 # 1 = export original ; 2..6 = detail decroissant ; 0 = densifie
+  smooth_shading: true
+
 sequence:
   name: ARG_FRA_182345
-  start_frame: 400
-  num_frames: 250
 
 paths:
   video: data/videos/ARG_FRA_182345.mov
@@ -9,6 +13,8 @@ paths:
   boxes: data/boxes/ARG_FRA_182345.npy
   xrel_sam: data/xrel_sam/ARG_FRA_182345.npy
   root_cam: data/root_cam/ARG_FRA_182345.npy
+  vertices: data/vertices/ARG_FRA_182345.npy
+  mhr_assets: data/mhr
   pitch_points: data/pitch/pitch_points.txt
   teams: data/teams/ARG_FRA_182345.txt
 
@@ -20,20 +26,20 @@ pitch:
 render:
   width: 1920
   height: 1080
-  output_fps: 50
+  output_fps: 50  # Cadence du fichier video ; aucun effet sur les frames des evenements.
   stickman_line_width: 2
   joint_diameter: 5
   pitch_line_width: 3
-  debug_frames: [0]
+  debug_frames: [650]  # Frames source.
   debug_dir: outputs/frames
 
 drone:
   width: 1920
   height: 1080
-  start_frame: 650
-  end_frame: 1240
+  start_frame: 650  # Frame source incluse.
+  end_frame: 1240   # Frame source exclue : derniere image = 1239.
   output_path: outputs/clips/drone_spiral_pred.mp4
-  green_floor_start_delay_s: 0
+  green_floor_start_frame: 650  # null = sol visible des le debut du clip.
   camera_motion:
     type: travel
     smoothstep: true
@@ -75,9 +81,11 @@ drone:
       zoom:
         mode: broadcast_camera
         factor: 1.0
-    mid: #supp si on veut pas de pause
-      arrive_at: 0.3
-      hold_duration_s: 0.1
+    # Ajouter mid2, mid3, ... au meme niveau pour prolonger le trajet.
+    # frame = arrivee dans la sequence source ; hold_frames inclut la frame d'arrivee.
+    mid1:  # L'ancien nom mid reste accepte pour une seule etape.
+      frame: 827
+      hold_frames: 5
       position:
         mode: cartesian
         origin: world_origin
@@ -88,6 +96,18 @@ drone:
       zoom:
         mode: factor
         factor: 1
+    # mid2:
+    #   frame: 1003
+    #   hold_frames: 10
+    #   position: {mode: cartesian, xyz: [-25.0, 0.0, 8.0]}
+    #   look_at: {mode: cartesian, xyz: [-30.0, -22.0, 2.0]}
+    #   zoom: {mode: factor, factor: 0.8}
+    # mid3:
+    #   frame: 1121
+    #   hold_frames: 5
+    #   position: {mode: cartesian, xyz: [-40.0, 15.0, 12.0]}
+    #   look_at: {mode: cartesian, xyz: [-26.0, -30.0, 1.0]}
+    #   zoom: {mode: factor, factor: 0.5}
     end:
       position:
         mode: cartesian
@@ -98,4 +118,4 @@ drone:
         xyz: [-26.0, -34.0, 0]
       zoom:
         mode: factor
-        factor: 0.5
+        factor: 0.2

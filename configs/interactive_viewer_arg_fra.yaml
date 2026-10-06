@@ -1,0 +1,68 @@
+# Build first with:
+# python scripts/build_x_world_estim.py --sequence ARG_FRA_182345 --overwrite
+# Then launch with:
+# python scripts/interactive_viewer.py --config configs/interactive_viewer_arg_fra.yaml
+
+sequence:
+  name: ARG_FRA_182345
+  fps: 50
+
+paths:
+  pitch_points: data/pitch/pitch_points.txt
+  teams: data/teams/ARG_FRA_182345.txt
+
+render:
+  colors:
+    team_a: [30, 120, 255]
+    team_b: [255, 140, 0]
+    fallback: [180, 180, 180]
+    referee: [230, 230, 230]
+    pitch_lines: [255, 0, 0]
+    floor_green: [190, 235, 190]
+    background_white: [255, 255, 255]
+
+interactive_viewer:
+  source: estim  # use "both" to display estimation and ground truth together
+  x_world_estim: data/x_world_estim/ARG_FRA_182345.npy
+  x_world_gt: data/x_world_gt/ARG_FRA_182345.npy
+  gt_color: [255, 0, 0]
+  gt_z_offset: 0.04
+
+  start_frame: 0
+  play: false
+  temporal_speed: 1.0
+
+  window_width: 1400
+  window_height: 900
+  window_left: 80
+  window_top: 80
+  background_color: [0.96, 0.98, 1.0]
+  line_width: 35.0
+  point_size: 5.0
+  floor_color_mode: fixed
+  mesh_show_back_face: true
+  pitch_line_z_offset: 0.05
+  show_axes: true
+
+  move_step_m: 2.0
+  camera_zoom: 0.32
+  initial_front: [0.05, -0.62, -0.78]
+  initial_camera:
+    position: [0.0, -85.0, 25.0]
+    look_at: [0.0, 0.0, 1.0]
+    up: [0.0, 0.0, 1.0]
+
+  camera_mode: free
+  field_orbit_center_z: 1.0
+  field_orbit_min_elevation_deg: 5.0
+  field_orbit_max_elevation_deg: 75.0
+  field_orbit_min_distance_m: 8.0
+  field_orbit_yaw_step_deg: 4.0
+  field_orbit_pitch_step_deg: 3.0
+  field_orbit_zoom_step_m: 5.0
+
+  mouse_look: false
+  capture_cursor: true
+  mouse_sensitivity: 1.9
+  max_mouse_delta: 80.0
+  invert_mouse_y: false

@@ -7,11 +7,11 @@ from _bootstrap import add_src_to_path
 
 add_src_to_path()
 
-from pose_video_demo.assembly.timeline import assemble_clips
-from pose_video_demo.config import load_config
-from pose_video_demo.io.loaders import load_sequence
-from pose_video_demo.utils.logging import setup_logging
-from pose_video_demo.utils.paths import resolve_path
+from video_maker.assembly.timeline import assemble_clips
+from video_maker.config import load_config
+from video_maker.io.loaders import load_sequence
+from video_maker.utils.logging import setup_logging
+from video_maker.utils.paths import resolve_path
 
 
 def main() -> None:

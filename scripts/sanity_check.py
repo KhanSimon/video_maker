@@ -6,9 +6,9 @@ from _bootstrap import add_src_to_path
 
 add_src_to_path()
 
-from pose_video_demo.config import load_config
-from pose_video_demo.io.loaders import describe_sequence, load_sequence
-from pose_video_demo.utils.logging import setup_logging
+from video_maker.config import load_config
+from video_maker.io.loaders import describe_sequence, load_sequence
+from video_maker.utils.logging import setup_logging
 
 
 def main() -> None:

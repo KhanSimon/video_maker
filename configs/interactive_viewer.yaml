@@ -1,10 +1,12 @@
+#python scripts/interactive_viewer.py --config configs/interactive_viewer.yaml
 sequence:
-  name: ARG_FRA_182345
-  fps: 50
+  name: ekstraklasa
+  fps: 50  # le NPZ ne contient ni FPS ni timestamps; ajuster selon la video source
 
 paths:
-  pitch_points: data/pitch/pitch_points.txt
-  teams: data/teams/ARG_FRA_182345.txt
+  sequence_npz: data/sequence/ekstraklasa.npz
+  pitch_points: data/pitch/pitch_points.txt  # memes bornes monde que pitch_points_world_m
+  teams: data/teams/ARG_FRA_182345.txt  # le NPZ ne contient pas l'appartenance aux equipes
 
 render:
   colors:
@@ -17,24 +19,50 @@ render:
     background_white: [255, 255, 255]
 
 interactive_viewer:
-  source: both  # gt, estim, both, ou chemin direct vers un .npy en (N,T,25,3)
+  source: estim  # npz, gt, estim, both, ou chemin direct vers un .npy/.npz
+  player_indices: [] # liste vide = tous les joueurs, exemple: [0, 15]
+  npz_pose_key: joints_pred_world_m
+  npz_valid_mask_key: valid_mask
+  npz_frame_numbers_key: frame_numbers
   x_world_gt: data/x_world_gt/ARG_FRA_182345.npy
   x_world_estim: data/x_world_estim/ARG_FRA_182345.npy
   gt_color: [255, 0, 0]
   gt_z_offset: 0.04
 
-  start_frame: 0
+  start_frame: 637
   play: false
-  fps: 50
   temporal_speed: 1.0  # borne par les controles entre 0.25 et 2.0
+
+  temporal_context:
+    enabled: false
+    player_indices: [0]     #0, 15  # plusieurs joueurs possibles, par exemple [0, 4, 12]
+    frame_offsets: [-198, 64]  # plusieurs offsets non nuls possibles, [-198, 64], [-100, 100
+    show_intermediate: false
+    intermediate_stride: 30   # 1 affiche chaque frame entre la frame courante et les offsets
+    intermediate_pastel_coefficient: 0 # 0 = couleur de base, 1 = blanc
+    endpoint_opacity: 1 #  # 0 = couleur intermediaire, 1 = couleur du joueur principal
+
+  minimap:
+    enabled: false
+    source_layer: auto      # suit gt/estim; en mode both, utilise estim
+    width_px: 320
+    height_px: 215
+    margin_px: 24
+    padding_px: 12
+    panel_color: [38, 92, 58]
+    pitch_line_color: [245, 248, 246]
+    pitch_line_width_px: 1.25
+    marker_radius_px: 5.5
+    position_joint_index: 8
+    clip_positions: true
 
   window_width: 1400
   window_height: 900
   window_left: 80
   window_top: 80
   background_color: [0.96, 0.98, 1.0]
-  line_width: 35.0
-  point_size: 5.0
+  line_width: 195.0
+  point_size: 6.0
   floor_color_mode: fixed  # fixed = couleur constante, lit = couleur influencee par l'eclairage Open3D
   mesh_show_back_face: true
   pitch_line_z_offset: 0.05
